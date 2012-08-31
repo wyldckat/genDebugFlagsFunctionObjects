@@ -1,0 +1,101 @@
+#!/bin/sh
+
+# - Generated dictionary loading code with:
+#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
+#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
+#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
+#       while read line; do
+#         echo "dict.lookup(\"$line\") >> Foam::${line}::debug;"
+#       done
+# 
+# - Generated #include code with:
+#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
+#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
+#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
+#       while read line; do
+#         echo "#include \"$line.H\""
+#       done
+# 
+# - Generated controlDict code with:
+#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
+#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
+#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
+#       while read line; do
+#         echo "$line   0;"
+#       done
+
+# Names to be renamed:
+#   dummyFO
+#   dummyFunctionObject
+#   controlDict.dummyFO
+#     dummyPlug
+#     DUMMYCONTROLS
+
+# File "Make/options" has to be created from scratch. Template:
+# EXE_INC = -I$(LIB_SRC)/finiteVolume/lnInclude
+# LIB_LIBS = -lfiniteVolume
+
+
+# First, generate the list of libraries to be reinterpreted to debug flags
+# function objects.
+FOLDERS=""
+for makeFolder in $(find ${FOAM_SRC} -name Make) \
+                  $(find ${FOAM_APP} -name Make); do
+
+  if [ -e "${makeFolder}/files" ]; then
+
+    if [ $(grep "_LIBBIN" ${makeFolder}/files | wc -l) -gt 0 ]; then
+
+      #Library detected - retrieve library path
+      FOLDERS="$FOLDERS ${makeFolder%/*}"
+
+    fi
+
+  fi
+
+done
+
+# Now go through the list of folders and generate debug flags function object
+TARGET_BASE_FOLDER=${0%/*/*}/src/debugFlagsFunctionObjects
+SOURCE_DUMMY_FOLDER=${0%/*/*}/etc/dummyFunctionObject
+
+#generate function objects
+echo ${FOLDERS} | while read folder; do
+
+  #go into the working folder, just in case...
+  cd ${TARGET_BASE_FOLDER}
+
+  #get relative folder path for recreating in the TARGET_BASE_FOLDER
+  RELATIVE_PATH=$(echo ${folder} | sed -e 's='$WM_PROJECT_DIR'/*==')
+  
+  #get library name
+  LIBRARY_NAME=${RELATIVE_PATH%%.*}
+  
+  #target folder
+  TARGET_FOLDER=${TARGET_BASE_FOLDER}/${RELATIVE_PATH}
+  
+  #create target folder
+  mkdir -p  2> /dev/null
+  
+  #copy dummy files to the target folder
+  cp -r ${SOURCE_DUMMY_FOLDER}/* ${TARGET_FOLDER}/
+  
+  #go into the target folder
+  cd ${TARGET_FOLDER}
+  
+  #define names
+  CLASS_NAME=${LIBRARY_NAME}DebugFlags
+  FUNCTION_OBJECT_NAME=${LIBRARY_NAME}DebugFlagsFunctionObject
+  
+  #rename files
+  mv dummyFO.H ${CLASS_NAME}.H
+  mv dummyFO.C ${CLASS_NAME}.C
+  mv dummyFunctionObject.H ${FUNCTION_OBJECT_NAME}.H
+  mv dummyFunctionObject.C ${FUNCTION_OBJECT_NAME}.C
+  mv controlDict.dummyFO controlDict.${CLASS_NAME}
+
+done
+
+echo "All done! To complete, run:"
+echo "  cd ${TARGET_BASE_FOLDER}"
+echo "  wmake all"
