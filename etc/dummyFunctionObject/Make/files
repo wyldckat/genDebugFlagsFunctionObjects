@@ -1,0 +1,4 @@
+dummyFO.C
+dummyFunctionObject.C
+
+LIB = $(FOAM_USER_LIBBIN)/libdummyFunctionObject
