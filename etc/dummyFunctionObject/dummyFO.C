@@ -23,6 +23,9 @@ License
 #include "Time.H"
 #include "dictionary.H"
 
+//Include list of included class references
+#include "dummyIncludeList.H"
+
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 defineTypeNameAndDebug(Foam::dummyFO, 0);
@@ -41,7 +44,6 @@ Foam::dummyFO::dummyFO
     name_(name),
     obr_(obr),
     active_(true)
-    //fileToUpdate_(dict.lookup("fileToUpdate")),
 {
     read(dict);
 }
@@ -59,42 +61,42 @@ void Foam::dummyFO::read(const dictionary& dict)
 {
     if (active_)
     {
-        //left as an example:
-        //dict.lookup("fileToUpdate") >> fileToUpdate_;
+        //Include list of lookup objects
+        #include "dummyCList.H"
 
         //do something?
-        Info << dummyFO::name() << ": read dictionary." << endl;
+        Info << dummyFO::name() << ": read dictionary and applied debug flags." << endl;
     }
 }
 
 
 void Foam::dummyFO::execute()
 {
-    if (active_)
-    {
-        //do something?
-        Info << dummyFO::name() << ": execute tasks." << endl;
-    }
+//     if (active_)
+//     {
+//         //do something?
+//         Info << dummyFO::name() << ": execute tasks." << endl;
+//     }
 }
 
 
 void Foam::dummyFO::end()
 {
-    if (active_)
-    {
-        //do something?
-        Info << dummyFO::name() << ": last task." << endl;
-    }
+//     if (active_)
+//     {
+//         //do something?
+//         Info << dummyFO::name() << ": last task." << endl;
+//     }
 }
 
 
 void Foam::dummyFO::write()
 {
-    if (active_)
-    {
-        //do something?
-        Info << dummyFO::name() << ": write task." << endl;
-    }
+//     if (active_)
+//     {
+//         //do something?
+//         Info << dummyFO::name() << ": write task." << endl;
+//     }
 }
 
 
