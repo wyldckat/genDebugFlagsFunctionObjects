@@ -230,11 +230,27 @@ for folder in ${FOLDERS}; do
   
   
   # 4- Generate Make/options
-  cp ${folder}/Make/options Make/options
-  echo "" >> Make/options
-  echo "EXE_INC += -I\$(WM_PROJECT_DIR)/${RELATIVE_PATH}/lnInclude" \
-                                       >> Make/options
-  echo "LIB_LIBS += -l${LIBRARY_NAME}" >> Make/options
+  if [ "${LIBRARY_NAME}" = "OSspecific" ]; then
+
+    #This is a corner case...
+    echo "" > Make/options
+    
+  else
+
+    cp ${folder}/Make/options Make/options
+    echo "" >> Make/options
+    echo "EXE_INC += -I\$(WM_PROJECT_DIR)/${RELATIVE_PATH}/lnInclude" \
+                                        >> Make/options
+    echo "LIB_LIBS += -l${LIBRARY_NAME}" >> Make/options
+
+  fi
+  
+  # 5- diagnosis
+  if [ $(cat ${CLASS_NAME}CList.H | wc -l) -eq 0 ]; then
+    #scrape this library, because there's aren't any flags!
+    cd ${TARGET_BASE_FOLDER}
+    rm -r ${TARGET_FOLDER}
+  fi
 
 done
 
