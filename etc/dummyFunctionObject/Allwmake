@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Make a copy of this folder, and only on the copy you can run:"
+echo "   wmake libso"
