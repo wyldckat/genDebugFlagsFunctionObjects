@@ -2,12 +2,17 @@
 #
 #License
 #    This file is NOT part of OpenFOAM, but is heavily based on it's code.
-#    OpenFOAM official website: www.openfoam.org
+#    This was not endorsed by SGI Corp, the trademark owners of OpenFOAM.
+#
+#    Home page for this script:
+#       https://github.com/wyldckat/genDebugFlagsFunctionObjects
+#
+#    OpenFOAM official website: http://www.openfoam.org
 #
 #    Both this code and OpenFOAM are free software: you can redistribute 
 #    it and/or modify it under the terms of the GNU General Public License 
-#     as published by the Free Software Foundation, either version 3 of the
-#     License, or (at your option) any later version.
+#    as published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
 #
 #    This code is distributed in the hope that it will be useful, but WITHOUT
 #    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -15,33 +20,14 @@
 #    for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with OpenFOAM.  If not, see <http://www.gnu.org/licenses/>.
+#    along with this source code.  If not, see <http://www.gnu.org/licenses/>.
+#
+#Description
+#    genDebugFlagsFunctionObjects will recreate OpenFOAM's folder structure
+#    as function objects for allowing modification of debug flags at runtime.
 #
 
-# - Generated dictionary loading code with:
-#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
-#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
-#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
-#       while read line; do
-#         echo "dict.lookup(\"$line\") >> Foam::${line}::debug;"
-#       done
-# 
-# - Generated #include code with:
-#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
-#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
-#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
-#       while read line; do
-#         echo "#include \"$line.H\""
-#       done
-# 
-# - Generated controlDict code with:
-#     find $FOAM_SRC/finiteVolume -name "*.C" | grep -v "lnInclude" | \
-#       xargs grep -h 'defineTypeNameAndDebug' | sort -u | \
-#       sed -e 's=.*(\(.*\),.*=\1=' -e 's=Foam::==' | \
-#       while read line; do
-#         echo "$line   0;"
-#       done
-
+#Coding mental notes:
 # Names to be renamed:
 #   dummyFO
 #   dummyFunctionObject
@@ -53,9 +39,10 @@
 # EXE_INC = -I$(LIB_SRC)/finiteVolume/lnInclude
 # LIB_LIBS = -lfiniteVolume
 
+# Code -----------------------------------------------------------------------
 
-# First, generate the list of libraries to be reinterpreted to debug flags
-# function objects.
+#First, generate the list of libraries to be reinterpreted to debug flags
+#function objects.
 FOLDERS=""
 for makeFolder in $(find ${FOAM_SRC} -name Make) \
                   $(find ${FOAM_APP} -name Make); do
@@ -73,12 +60,12 @@ for makeFolder in $(find ${FOAM_SRC} -name Make) \
 
 done
 
-# Now go through the list of folders and generate debug flags function object
-TARGET_BASE_FOLDER=${0%/*/*}/src/debugFlagsFunctionObjects
+#Now go through the list of folders and generate debug flags function object
+TARGET_BASE_FOLDER=${0%/*/*}
 SOURCE_DUMMY_FOLDER=${0%/*/*}/etc/dummyFunctionObject
 
 #generate function objects
-echo ${FOLDERS} | while read folder; do
+for folder in ${FOLDERS}; do
 
   #go into the working folder, just in case...
   cd ${TARGET_BASE_FOLDER}
@@ -87,13 +74,13 @@ echo ${FOLDERS} | while read folder; do
   RELATIVE_PATH=$(echo ${folder} | sed -e 's='$WM_PROJECT_DIR'/*==')
   
   #get library name
-  LIBRARY_NAME=${RELATIVE_PATH%%.*}
+  LIBRARY_NAME=$(grep -e "^LIB" ${folder}/Make/files | sed 's=.*/lib\([A-Za-z0-9]*\)[.so]*=\1=')
   
   #target folder
   TARGET_FOLDER=${TARGET_BASE_FOLDER}/${RELATIVE_PATH}
   
   #create target folder
-  mkdir -p  2> /dev/null
+  mkdir -p ${TARGET_FOLDER} 2> /dev/null
   
   #copy dummy files to the target folder
   cp -r ${SOURCE_DUMMY_FOLDER}/* ${TARGET_FOLDER}/
@@ -111,6 +98,125 @@ echo ${FOLDERS} | while read folder; do
   mv dummyFunctionObject.H ${FUNCTION_OBJECT_NAME}.H
   mv dummyFunctionObject.C ${FUNCTION_OBJECT_NAME}.C
   mv controlDict.dummyFO controlDict.${CLASS_NAME}
+  rm dummyFOCList.H dummyFOIncludeList.H #these two are not needed
+  
+  #rename class names inside the source files
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' ${CLASS_NAME}.H
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' ${CLASS_NAME}.C
+
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+      ${FUNCTION_OBJECT_NAME}.H
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+      ${FUNCTION_OBJECT_NAME}.C
+
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+      Make/files
+      
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+      -e 's=dummyPlug='${CLASS_NAME}'Plug='
+      controlDict.${CLASS_NAME}
+
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=' controlDict
+  
+  #Generate class list
+  CLASS_FULL_LIST=""
+  CLASS_NAME_LIST=""
+  
+  # For each file, search for type definition and sub-namespaces
+  find ${folder} -name "*.C" | grep -v "lnInclude" | \
+  while read file; do
+
+    #get line for defineTypeNameAndDebug; the first one is enough
+    lines_def=$(grep -nh 'defineTypeNameAndDebug' ${file} | sed 's=^\([0-9]*).*=\1=' | head -1)
+    
+    #get namespace lines that are not Foam
+    lines_names=$(grep -nh 'namespace' ${file} | grep -v 'Foam' | sed 's=^\([0-9]*\).*=\1=')
+
+    #Attempt concatenating subspace names
+    SUBNAMESPACE=""
+    [ -n "$lines_names" ] && \
+    for number in $lines_names; do
+      
+      if [ ${number} -lt ${lines_def} ]; then
+        
+        THE_NAME=$(grep -nh 'namespace' ${file} | grep -e '^'${number} | \
+                   sed -e 's=.*namespace *\([A-Za-z0-9]*\) *{*=\1=')
+        SUBNAMESPACE="${SUBNAMESPACE}${THE_NAME}::"
+        
+      else
+        break
+      fi
+      
+    done
+    
+    #get class names and add them to the list
+    grep -h 'defineTypeNameAndDebug' ${file} | sed -e 's=.*(\(.*\),.*=\1=' | \
+    while read class_name; do
+
+      #Add classes to full list, e.g. Foam::schemes
+      CLASS_FULL_LIST="${CLASS_FULL_LIST} Foam::${SUBNAMESPACE}${class_name}"
+
+      #Add classes to name list, e.g. schemes
+      CLASS_NAME_LIST="${CLASS_NAME_LIST} ${class_name}"
+      
+    done
+    
+  done
+  
+
+  #Now that we have the class list, we generate the files with these classes
+  # 1- generate include list
+  (
+    for class_name in ${CLASS_NAME_LIST}; do
+      
+      echo "#include \"${class_name}.H\""
+      
+    done 
+  ) | sort -u >> ${CLASS_NAME}IncludeList.H
+  
+  
+  # 2- generate dictionary read lines
+  (
+    for class_name in ${CLASS_FULL_LIST}; do
+      
+      echo "dict.lookup(\"$class_name\") >> ${class_name}::debug;"
+      
+    done
+  ) | sort -u >> ${CLASS_NAME}CList.H
+  
+  
+  # 3- generate controlDict
+  #   a) header
+  (
+    echo "${CLASS_NAME}Plug"
+    echo "{"
+    echo "      type            ${CLASS_NAME};"
+    echo "      functionObjectLibs (\"lib"${FUNCTION_OBJECT_NAME}".so\");"
+    echo "      outputControl   timeStep;"
+    echo "      outputInterval  1;"
+    echo ""
+  ) > controlDict.${CLASS_NAME}
+
+  #   b) list of flags
+  (
+    for class_name in ${CLASS_FULL_LIST}; do
+      
+      echo "      $class_name   0;"
+      
+    done
+  ) | sort -u >> controlDict.${CLASS_NAME}
+
+  #   c) end list
+  echo "}" >> controlDict.${CLASS_NAME}
+  
+  
+  # 4- Generate Make/options
+  echo "EXE_INC = -I\$(WM_PROJECT_DIR)/${RELATIVE_PATH}/lnInclude" > Make/options
+  echo "LIB_LIBS = -l${LIBRARY_NAME}" >> Make/options
 
 done
 
