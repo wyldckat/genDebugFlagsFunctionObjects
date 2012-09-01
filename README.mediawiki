@@ -1,0 +1,38 @@
+<br />
+
+= Description =
+This started as an idea from this bug report: http://www.openfoam.org/mantisbt/view.php?id=640
+
+The idea was to create a script that would generate automatically a complete set of function objects, corresponding to each OpenFOAM library, that would allow to control the debug flags for each one of those respective libraries. A great idea in theory, but impratical in practice. '''Nonetheless''', some of the resulting function object libraries do work, ''when'' they build!
+
+This was a personal exercise of skill test and development. '''It's not a complete project''', due to problems inherent to what I was trying to do, namely something ''somewhat stupid'', i.e. generate code with the assumption of a very clean and strict source code.
+
+If you have questions about this code, feel free to use the project's Issue tracker to ask them: [https://github.com/wyldckat/genDebugFlagsFunctionObjects/issues]
+
+Disclaimer: This effort was not endorsed by SGI Corp, the trademark owners of OpenFOAM.
+
+'''Note''': This was tested with OpenFOAM 2.1.x.
+
+Keep in mind that this is a contribution made in the community and not part of OpenFOAM(R).
+
+= Usage instructions =
+
+'''WARNING''': Use this at your own risk! And '''do not''' use this as ''root''!!!
+
+<ol><li>Download, either using <code>git</code> or use the ''Downloads'' pseudo-button on the top right at [https://github.com/wyldckat/genDebugFlagsFunctionObjects].</li>
+<li>Run: <pre>bin/genDebugFlagsFunctionObjects</pre></li>
+<li>Build all libraries: <pre>wmake all</pre></li>
+<li>Not all libraries will build properly. You might want to fix them manually if you want to, but it might be impratical.</li>
+<li>To use each one, go to the folder of the respective function object library, for example <tt>genDebugFlagsFunctionObjects/src/finiteVolume</tt>.</li>
+<li>Notice that there are two files: one named <tt>controlDict.finiteVolume</tt> and another named <tt>controlDict</tt>. The second one show how to include the first one.</li>
+<li>Copy the file <tt>controlDict.finiteVolume</tt> to your case's <tt>system</tt> folder.</li>
+<li>Edit your case's <tt>system/controlDict</tt> and add this code block:
+<pre>functions
+{
+#include "controlDict.finiteVolumeDebugFlags"
+}</pre>Note: if you already have a <tt>functions</tt> block, then use only the <tt>#include</tt> line in your own block.</li>
+</ol>
+
+= License =
+This is bound to the same license as OpenFOAM, namely GPLv3. Which means that you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+See http://www.gnu.org/licenses/ for more information about GPL.
