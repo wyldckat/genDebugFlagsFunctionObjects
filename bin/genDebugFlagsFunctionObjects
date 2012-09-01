@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 #
 #License
 #    This file is NOT part of OpenFOAM, but is heavily based on it's code.
@@ -68,8 +68,6 @@ SCRIPT_PATH=$(pwd)
 TARGET_BASE_FOLDER=${SCRIPT_PATH}
 SOURCE_DUMMY_FOLDER=${SCRIPT_PATH}/etc/dummyFunctionObject
 
-set -xe
-
 #generate function objects
 echo "Generating Debug Flags Function Objects..."
 for folder in ${FOLDERS}; do
@@ -109,8 +107,9 @@ for folder in ${FOLDERS}; do
   mv dummyFO.C ${CLASS_NAME}.C
   mv dummyFunctionObject.H ${FUNCTION_OBJECT_NAME}.H
   mv dummyFunctionObject.C ${FUNCTION_OBJECT_NAME}.C
-  #these three are not needed
-  rm controlDict.dummyFO dummyFOCList.H dummyFOIncludeList.H
+
+  #these files are not needed
+  rm controlDict.dummyFO dummyFOCList.H dummyFOIncludeList.H Allwmake
   
   #rename class names inside the source files
   sed -i -e 's=dummyFO='${CLASS_NAME}'=g' ${CLASS_NAME}.H
@@ -168,11 +167,15 @@ for folder in ${FOLDERS}; do
                         sed -e 's=.*(\(.*\),.*=\1=')
     do
 
-      #Add classes to full list, e.g. Foam::schemes
-      export CLASS_FULL_LIST="${CLASS_FULL_LIST} ${SUBNAMESPACE}${class_name}"
+      #first check if the respective header file also exists, otherwise 
+      #we cannot include this automatically.
+      if [ -e "${folder}/lnInclude/${class_name##*::}.H" ]; then
+        #Add classes to full list, e.g. Foam::schemes
+        export CLASS_FULL_LIST="${CLASS_FULL_LIST} ${SUBNAMESPACE}${class_name}"
 
-      #Add classes to name list, e.g. schemes
-      export CLASS_NAME_LIST="${CLASS_NAME_LIST} ${class_name##*::}"
+        #Add classes to name list, e.g. schemes
+        export CLASS_NAME_LIST="${CLASS_NAME_LIST} ${class_name##*::}"
+      fi
       
     done
     
@@ -227,8 +230,11 @@ for folder in ${FOLDERS}; do
   
   
   # 4- Generate Make/options
-  echo "EXE_INC = -I\$(WM_PROJECT_DIR)/${RELATIVE_PATH}/lnInclude" > Make/options
-  echo "LIB_LIBS = -l${LIBRARY_NAME}" >> Make/options
+  cp ${folder}/Make/options Make/options
+  echo "" >> Make/options
+  echo "EXE_INC += -I\$(WM_PROJECT_DIR)/${RELATIVE_PATH}/lnInclude" \
+                                       >> Make/options
+  echo "LIB_LIBS += -l${LIBRARY_NAME}" >> Make/options
 
 done
 
