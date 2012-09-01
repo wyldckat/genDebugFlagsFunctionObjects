@@ -24,7 +24,7 @@ License
 #include "dictionary.H"
 
 //Include list of included class references
-#include "dummyIncludeList.H"
+#include "dummyFOIncludeList.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
@@ -62,7 +62,7 @@ void Foam::dummyFO::read(const dictionary& dict)
     if (active_)
     {
         //Include list of lookup objects
-        #include "dummyCList.H"
+        #include "dummyFOCList.H"
 
         //do something?
         Info << dummyFO::name() << ": read dictionary and applied debug flags." << endl;
