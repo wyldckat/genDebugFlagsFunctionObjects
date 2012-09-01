@@ -43,6 +43,7 @@
 
 #First, generate the list of libraries to be reinterpreted to debug flags
 #function objects.
+echo "Gathering folder list..."
 FOLDERS=""
 for makeFolder in $(find ${FOAM_SRC} -name Make) \
                   $(find ${FOAM_APP} -name Make); do
@@ -61,11 +62,19 @@ for makeFolder in $(find ${FOAM_SRC} -name Make) \
 done
 
 #Now go through the list of folders and generate debug flags function object
-TARGET_BASE_FOLDER=${0%/*/*}
-SOURCE_DUMMY_FOLDER=${0%/*/*}/etc/dummyFunctionObject
+cd ${0%/*}
+cd ..
+SCRIPT_PATH=$(pwd)
+TARGET_BASE_FOLDER=${SCRIPT_PATH}
+SOURCE_DUMMY_FOLDER=${SCRIPT_PATH}/etc/dummyFunctionObject
+
+set -xe
 
 #generate function objects
+echo "Generating Debug Flags Function Objects..."
 for folder in ${FOLDERS}; do
+  
+  echo "Now processing: $folder"
 
   #go into the working folder, just in case...
   cd ${TARGET_BASE_FOLDER}
@@ -76,12 +85,15 @@ for folder in ${FOLDERS}; do
   #get library name
   LIBRARY_NAME=$(grep -e "^LIB" ${folder}/Make/files | sed 's=.*/lib\([A-Za-z0-9]*\)[.so]*=\1=')
   
+  #skip object-only libraries
+  [ -n "$(echo $LIBRARY_NAME | grep -e "^LIB")" ] && continue
+  
   #target folder
   TARGET_FOLDER=${TARGET_BASE_FOLDER}/${RELATIVE_PATH}
   
   #create target folder
   mkdir -p ${TARGET_FOLDER} 2> /dev/null
-  
+
   #copy dummy files to the target folder
   cp -r ${SOURCE_DUMMY_FOLDER}/* ${TARGET_FOLDER}/
   
@@ -117,7 +129,7 @@ for folder in ${FOLDERS}; do
       
   sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
       -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
-      -e 's=dummyPlug='${CLASS_NAME}'Plug='
+      -e 's=dummyPlug='${CLASS_NAME}'Plug=' \
       controlDict.${CLASS_NAME}
 
   sed -i -e 's=dummyFO='${CLASS_NAME}'=' controlDict
@@ -131,7 +143,9 @@ for folder in ${FOLDERS}; do
   while read file; do
 
     #get line for defineTypeNameAndDebug; the first one is enough
-    lines_def=$(grep -nh 'defineTypeNameAndDebug' ${file} | sed 's=^\([0-9]*).*=\1=' | head -1)
+    lines_def=$(grep -nh 'defineTypeNameAndDebug' ${file} | sed 's=^\([0-9]*\).*=\1=' | head -1)
+    
+    [ -z "$lines_def" ] && continue
     
     #get namespace lines that are not Foam
     lines_names=$(grep -nh 'namespace' ${file} | grep -v 'Foam' | sed 's=^\([0-9]*\).*=\1=')
