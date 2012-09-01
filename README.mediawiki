@@ -9,11 +9,11 @@ This was a personal exercise of skill test and development. '''It's not a comple
 
 If you have questions about this code, feel free to use the project's Issue tracker to ask them: [https://github.com/wyldckat/genDebugFlagsFunctionObjects/issues]
 
-Disclaimer: This effort was not endorsed by SGI Corp, the trademark owners of OpenFOAM.
 
-'''Note''': This was tested with OpenFOAM 2.1.x.
-
-Keep in mind that this is a contribution made in the community and not part of OpenFOAM(R).
+'''Notes''':
+* Disclaimer: This effort was not endorsed by SGI Corp, the trademark owners of OpenFOAM.
+* Therefore, keep in mind that this is a contribution made to the community and not part of OpenFOAM(R).
+* This was tested with OpenFOAM 2.1.x.
 
 = Usage instructions =
 
@@ -24,7 +24,7 @@ Keep in mind that this is a contribution made in the community and not part of O
 <li>Build all libraries: <pre>wmake all</pre></li>
 <li>Not all libraries will build properly. You might want to fix them manually if you want to, but it might be impratical.</li>
 <li>To use each one, go to the folder of the respective function object library, for example <tt>genDebugFlagsFunctionObjects/src/finiteVolume</tt>.</li>
-<li>Notice that there are two files: one named <tt>controlDict.finiteVolume</tt> and another named <tt>controlDict</tt>. The second one show how to include the first one.</li>
+<li>Notice that there are two files: one named <tt>controlDict.finiteVolume</tt> and another named <tt>controlDict</tt>. The second one shows how to include the first one.</li>
 <li>Copy the file <tt>controlDict.finiteVolume</tt> to your case's <tt>system</tt> folder.</li>
 <li>Edit your case's <tt>system/controlDict</tt> and add this code block:
 <pre>functions
