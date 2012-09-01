@@ -109,49 +109,45 @@ for folder in ${FOLDERS}; do
   mv dummyFO.C ${CLASS_NAME}.C
   mv dummyFunctionObject.H ${FUNCTION_OBJECT_NAME}.H
   mv dummyFunctionObject.C ${FUNCTION_OBJECT_NAME}.C
-  mv controlDict.dummyFO controlDict.${CLASS_NAME}
-  rm dummyFOCList.H dummyFOIncludeList.H #these two are not needed
+  #these three are not needed
+  rm controlDict.dummyFO dummyFOCList.H dummyFOIncludeList.H
   
   #rename class names inside the source files
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' ${CLASS_NAME}.H
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' ${CLASS_NAME}.C
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' ${CLASS_NAME}.H
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' ${CLASS_NAME}.C
 
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
-      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=g' \
       ${FUNCTION_OBJECT_NAME}.H
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
-      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=g' \
       ${FUNCTION_OBJECT_NAME}.C
 
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
-      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' \
+      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=g' \
       Make/files
-      
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' \
-      -e 's=dummyFunctionObject='${FUNCTION_OBJECT_NAME}'=' \
-      -e 's=dummyPlug='${CLASS_NAME}'Plug=' \
-      controlDict.${CLASS_NAME}
 
-  sed -i -e 's=dummyFO='${CLASS_NAME}'=' controlDict
+  sed -i -e 's=dummyFO='${CLASS_NAME}'=g' controlDict
   
   #Generate class list
-  CLASS_FULL_LIST=""
-  CLASS_NAME_LIST=""
+  export CLASS_FULL_LIST=""
+  export CLASS_NAME_LIST=""
   
   # For each file, search for type definition and sub-namespaces
-  find ${folder} -name "*.C" | grep -v "lnInclude" | \
-  while read file; do
+  for file in $(find ${folder} -name "*.C" | grep -v "lnInclude"); do
 
     #get line for defineTypeNameAndDebug; the first one is enough
-    lines_def=$(grep -nh 'defineTypeNameAndDebug' ${file} | sed 's=^\([0-9]*\).*=\1=' | head -1)
+    lines_def=$(grep -nh 'defineTypeNameAndDebug' ${file} | \
+                sed 's=^\([0-9]*\).*=\1=' | head -1)
     
     [ -z "$lines_def" ] && continue
     
     #get namespace lines that are not Foam
-    lines_names=$(grep -nh 'namespace' ${file} | grep -v 'Foam' | sed 's=^\([0-9]*\).*=\1=')
+    lines_names=$(grep -nh 'namespace' ${file} | grep -v 'Foam' | \
+                  sed 's=^\([0-9]*\).*=\1=')
 
     #Attempt concatenating subspace names
-    SUBNAMESPACE=""
+    export SUBNAMESPACE=""
     [ -n "$lines_names" ] && \
     for number in $lines_names; do
       
@@ -159,7 +155,7 @@ for folder in ${FOLDERS}; do
         
         THE_NAME=$(grep -nh 'namespace' ${file} | grep -e '^'${number} | \
                    sed -e 's=.*namespace *\([A-Za-z0-9]*\) *{*=\1=')
-        SUBNAMESPACE="${SUBNAMESPACE}${THE_NAME}::"
+        export SUBNAMESPACE="${SUBNAMESPACE}${THE_NAME}::"
         
       else
         break
@@ -168,20 +164,20 @@ for folder in ${FOLDERS}; do
     done
     
     #get class names and add them to the list
-    grep -h 'defineTypeNameAndDebug' ${file} | sed -e 's=.*(\(.*\),.*=\1=' | \
-    while read class_name; do
+    for class_name in $(grep -h 'defineTypeNameAndDebug' ${file} | \
+                        sed -e 's=.*(\(.*\),.*=\1=')
+    do
 
       #Add classes to full list, e.g. Foam::schemes
-      CLASS_FULL_LIST="${CLASS_FULL_LIST} Foam::${SUBNAMESPACE}${class_name}"
+      export CLASS_FULL_LIST="${CLASS_FULL_LIST} ${SUBNAMESPACE}${class_name}"
 
       #Add classes to name list, e.g. schemes
-      CLASS_NAME_LIST="${CLASS_NAME_LIST} ${class_name}"
+      export CLASS_NAME_LIST="${CLASS_NAME_LIST} ${class_name##*::}"
       
     done
     
   done
   
-
   #Now that we have the class list, we generate the files with these classes
   # 1- generate include list
   (
@@ -205,6 +201,8 @@ for folder in ${FOLDERS}; do
   
   # 3- generate controlDict
   #   a) header
+  export CLASS_NAME
+  export FUNCTION_OBJECT_NAME
   (
     echo "${CLASS_NAME}Plug"
     echo "{"
